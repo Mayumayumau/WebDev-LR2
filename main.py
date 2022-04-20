@@ -9,7 +9,7 @@ name_space = api.namespace('Books', description='Books') # http://127.0.0.1:5000
 books_model = api.model('books', {
     'name': fields.String(required=True, description='Book Name'),
     'author': fields.String(required=True, description='Author Name'),
-    'year': fields.String(required=False, description='Publishing Year'),
+    'year': fields.Integer(required=False, description='Publishing Year'),
     'pages': fields.Integer(description='Number of Pages'),
     'genre': fields.List(fields.String, description='Book Genre'),
     'rating': fields.Float(description='Goodreads.com rating')
@@ -24,7 +24,7 @@ reqp = reqparse.RequestParser()
 reqp.add_argument('id', type=int, required=False)
 reqp.add_argument('name', type=str, required=False)
 reqp.add_argument('author', type=str, required=False)
-reqp.add_argument('year', type=str, required=False)
+reqp.add_argument('year', type=int, required=False)
 reqp.add_argument('pages', type=int, required=False)
 reqp.add_argument('genre', type=str, action='append', required=False)
 reqp.add_argument('rating', type=float, required=False)
@@ -76,6 +76,7 @@ class BookID(Resource):
                    if value:
                        book[key] = value
 
+# TODO добавить сортировку по полям, minmax для числовых полей
 
 if __name__ == '__main__':
     app.run(debug=True)
