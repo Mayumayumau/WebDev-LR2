@@ -21,7 +21,6 @@ books = [
 ]
 
 reqp = reqparse.RequestParser()
-reqp.add_argument('id', type=int, required=False)
 reqp.add_argument('name', type=str, required=False)
 reqp.add_argument('author', type=str, required=False)
 reqp.add_argument('year', type=int, required=False)
@@ -77,6 +76,23 @@ class BookID(Resource):
                        book[key] = value
 
 # TODO добавить сортировку по полям, minmax для числовых полей
+
+@name_space.route('/<string:name>')
+@name_space.param('name', 'A book name')
+@name_space.response(404, 'Book not found')
+class BookName(Resource):
+    @name_space.marshal_with(books_model)
+    def get(self, name):
+        """Sort books by name"""
+        result = []
+        for book in books:
+            if book['name'].lower() == name.lower():
+                result.append(book)
+        if result:
+            return result
+        name_space.abort(404)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
