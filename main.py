@@ -1,5 +1,6 @@
 from flask import Flask, Blueprint
 from flask_restx import Api, Resource, fields, reqparse
+from numpy import inf
 
 
 app = Flask(__name__)
@@ -16,8 +17,8 @@ books_model = api.model('books', {
 })
 
 books = [
-    {'id': 1,'name': 'War and Peace', 'author': 'Leo Tolstoy', 'genre': ['epic', 'classics']},
-    {'id': 2,'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky', 'year': 1853}
+    {'id': 1,'name': 'War and Peace', 'author': 'Leo Tolstoy', 'genre': ['epic', 'classics'], 'rating': 4.3},
+    {'id': 2,'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky', 'year': 1853, 'rating': 4.7}
 ]
 
 reqp = reqparse.RequestParser()
@@ -130,6 +131,9 @@ class PublishingPeriod(Resource):
     @name_space.marshal_with(books_model)
     def get(self, period):
         """Filter books by publishing period"""
+
+
+
         period = [int(el) for el in period.split("-")]
         result = []
         for book in books:
@@ -139,6 +143,42 @@ class PublishingPeriod(Resource):
         if result:
             return result
         name_space.abort(404)
+
+stats_model = api.model('stats', {
+    'min': fields.Nested(books_model, required=True, description='The lowest value in the library'),
+    'max': fields.Nested(books_model, required=True, description='The highest value in the library'),
+    'average': fields.Raw(required=True, description='The average value')
+})
+
+@name_space.route('/stats/<arg>')
+@name_space.param('arg', 'The field to evaluate')
+class LibStats(Resource):
+    @name_space.marshal_with(stats_model)
+    def get(self, arg):
+        """Show library statistics by a number field"""
+        result = {'min': None, 'max': None, 'average': None}
+        min_value = inf
+        max_value = 0
+        average_value = 0
+        num = 0
+        for book in books:
+            value = book.get(arg)
+            if value:
+                if value < min_value:
+                    result['min'] = book
+                    min_value = value
+                elif value > max_value:
+                    result['max'] = book
+                    max_value = value
+                average_value += value
+                num += 1
+        average_value /= num
+        if average_value > 0:
+            if arg == 'year':
+                average_value = int(average_value)
+            result['average'] = average_value
+        return result
+
 
 if __name__ == '__main__':
     app.run(debug=True)
