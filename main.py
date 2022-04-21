@@ -17,7 +17,7 @@ books_model = api.model('books', {
 
 books = [
     {'id': 1,'name': 'War and Peace', 'author': 'Leo Tolstoy', 'genre': ['epic', 'classics']},
-    {'id': 2,'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky'}
+    {'id': 2,'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky', 'year': 1853}
 ]
 
 reqp = reqparse.RequestParser()
@@ -77,13 +77,13 @@ class BookID(Resource):
 
 # TODO добавить сортировку по полям, minmax для числовых полей
 
-@name_space.route('/<string:name>')
+@name_space.route('/names/<string:name>')
 @name_space.param('name', 'A book name')
 @name_space.response(404, 'Book not found')
 class BookName(Resource):
     @name_space.marshal_with(books_model)
     def get(self, name):
-        """Sort books by name"""
+        """Filter books by name"""
         result = []
         for book in books:
             if book['name'].lower() == name.lower():
@@ -92,7 +92,53 @@ class BookName(Resource):
             return result
         name_space.abort(404)
 
+@name_space.route('/authors/<string:author>')
+@name_space.param('author', 'A book author')
+@name_space.response(404, 'Book not found')
+class BookAuthor(Resource):
+    @name_space.marshal_with(books_model)
+    def get(self, author):
+        """Filter books by author"""
+        result = []
+        for book in books:
+            if book['author'].lower() == author.lower():
+                result.append(book)
+        if result:
+            return result
+        name_space.abort(404)
 
+@name_space.route('/genres/<string:genre>')
+@name_space.param('genre', 'A book genre')
+@name_space.response(404, 'Book not found')
+class BookGenres(Resource):
+    @name_space.marshal_with(books_model)
+    def get(self, genre):
+        """Filter books by genre"""
+        result = []
+        for book in books:
+            genres = book.get('genre')
+            if genres and genre.lower() in [el.lower() for el in genres]:
+                result.append(book)
+        if result:
+            return result
+        name_space.abort(404)
+
+@name_space.route('/years/<period>')
+@name_space.param('period', 'A period of publishing')
+@name_space.response(404, 'Book not found')
+class PublishingPeriod(Resource):
+    @name_space.marshal_with(books_model)
+    def get(self, period):
+        """Filter books by publishing period"""
+        period = [int(el) for el in period.split("-")]
+        result = []
+        for book in books:
+            publishing_year = book.get('year')
+            if publishing_year and publishing_year >= period[0] and publishing_year <= period[1]:
+                result.append(book)
+        if result:
+            return result
+        name_space.abort(404)
 
 if __name__ == '__main__':
     app.run(debug=True)
