@@ -6,6 +6,7 @@ app = Flask(__name__)
 api = Api(app=app, description='A mini library API', title='Library API')
 name_space = api.namespace('Books', description='Books')  # http://127.0.0.1:5000/books
 
+# Создаем модель для возвращаемых API данных
 books_model = api.model('books', {
     'name': fields.String(required=True, description='Book Name'),
     'author': fields.String(required=True, description='Author Name'),
@@ -17,9 +18,11 @@ books_model = api.model('books', {
 
 books = [
     {'book_id': 1, 'name': 'War and Peace', 'author': 'Leo Tolstoy', 'genre': ['epic', 'classics'], 'rating': 4.3},
-    {'book_id': 2, 'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky', 'year': 1853, 'rating': 4.7, 'pages': 345}
+    {'book_id': 2, 'name': 'Crime and Punishment', 'author': 'Feodor Dostoevsky', 'year': 1853, 'rating': 4.7,
+     'pages': 345}
 ]
 
+# Список параметров, которые могут быть получены из запроса
 reqp = reqparse.RequestParser()
 reqp.add_argument('name', type=str, required=False)
 reqp.add_argument('author', type=str, required=False)
@@ -29,6 +32,7 @@ reqp.add_argument('genre', type=str, action='append', required=False)
 reqp.add_argument('rating', type=float, required=False)
 
 
+# Обработчики запросов для пути /Books/ - получение списка книг и добавление книги в список
 @name_space.route('/')
 class BookList(Resource):
     @name_space.marshal_list_with(books_model)
@@ -46,6 +50,7 @@ class BookList(Resource):
         books.append(args)
 
 
+# Обработчики запросов для путей вида /Books/1 - найти книгу по айди, удалить книгу, внести изменения в информацию
 @name_space.route('/<int:book_id>')
 @name_space.param('book_id', 'A unique identifier')
 @name_space.response(404, 'Book not found')
@@ -67,9 +72,9 @@ class BookID(Resource):
                 books.pop(i)
                 return f"The book with ID={book_id} has been deleted"
 
-    # TODO change book info
     @name_space.expect(books_model)
     def put(self, book_id):
+        """Update book info"""
         args = reqp.parse_args()
         for book in books:
             if book['book_id'] == book_id:
@@ -78,8 +83,7 @@ class BookID(Resource):
                         book[key] = value
 
 
-# TODO добавить сортировку по полям, minmax для числовых полей
-
+# Обработчик запросов для путей вида /Books/names/War%20and%20Peace - найти все книги с заданным названием
 @name_space.route('/names/<string:name>')
 @name_space.param('name', 'A book name')
 @name_space.response(404, 'Book not found')
@@ -96,6 +100,7 @@ class BookName(Resource):
         name_space.abort(404)
 
 
+# Обработчик запросов для путей вида /Books/authors/Leo%20Tolstoy - найти все книги автора
 @name_space.route('/authors/<string:author>')
 @name_space.param('author', 'A book author')
 @name_space.response(404, 'Book not found')
@@ -112,6 +117,7 @@ class BookAuthor(Resource):
         name_space.abort(404)
 
 
+# Обработчик запросов для путей вида /Books/genres/epic - найти все книги заданного жанра
 @name_space.route('/genres/<string:genre>')
 @name_space.param('genre', 'A book genre')
 @name_space.response(404, 'Book not found')
@@ -129,8 +135,9 @@ class BookGenres(Resource):
         name_space.abort(404)
 
 
+# функция для поиска книг со значением заданного числового поля в заданном промежутке
 def find_books(limits, field):
-    limits = [int(el) for el in limits.split("-")]
+    limits = [float(el) for el in limits.split("-")]
     result = []
     for book in books:
         data = book.get(field)
@@ -139,6 +146,7 @@ def find_books(limits, field):
     return result
 
 
+# Обработчик запросов для путей вида /Books/years/1800-1900 - найти все книги, опубликованные в заданный период
 @name_space.route('/years/<period>')
 @name_space.param('period', 'A period of publishing')
 @name_space.response(404, 'Book not found')
@@ -154,6 +162,7 @@ class PublishingPeriod(Resource):
         name_space.abort(404)
 
 
+# Обработчик запросов для путей вида /Books/pages/300-400 - найти все книги заданной длины
 @name_space.route('/pages/<limits>')
 @name_space.param('limits', 'Limits for the page amount')
 @name_space.response(404, 'Book not found')
@@ -167,6 +176,7 @@ class PageAmount(Resource):
         name_space.abort(404)
 
 
+# Обработчик запросов для путей вида /Books/ratings/4.5-4.7 - найти все книги с заданным рейтингом
 @name_space.route('/ratings/<limits>')
 @name_space.param('limits', 'Limits for the rating')
 @name_space.response(404, 'Book not found')
@@ -180,6 +190,7 @@ class BookRating(Resource):
         name_space.abort(404)
 
 
+# модель для возврата минимальных, максимальных и средних значений по числовым полям
 stats_model = api.model('stats', {
     'min': fields.Nested(books_model, required=True, description='The lowest value in the library'),
     'max': fields.Nested(books_model, required=True, description='The highest value in the library'),
@@ -187,6 +198,8 @@ stats_model = api.model('stats', {
 })
 
 
+# Обработчик запросов для путей вида /Books/stats/pages - показать минимальное, максимальное и среднее значение
+# по заданному числовому полю
 @name_space.route('/stats/<arg>')
 @name_space.param('arg', 'The field to evaluate')
 class LibStats(Resource):
